@@ -751,3 +751,584 @@
                 }
                 
                 showSuccess('login-success', '
+// server.js - MaruGod Shop Backend API
+const express = require('express');
+const mysql = require('mysql2');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const cors = require('cors');
+const dotenv = require('dotenv');
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public')); // สำหรับ serve HTML files
+
+// Database Configuration
+const db = mysql.createConnection({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'marugod_shop'
+});
+
+// Connect to Database
+db.connect((err) => {
+    if (err) {
+        console.error('Database connection failed:', err);
+        return;
+    }
+    console.log('Connected to MySQL Database');
+});
+
+// Create Tables if not exists
+const createTables = () => {
+    // Users table
+    const createUsersTable = `
+        CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            firstName VARCHAR(100) NOT NULL,
+            lastName VARCHAR(100) NOT NULL,
+            username VARCHAR(100) UNIQUE NOT NULL,
+            phone VARCHAR(20),
+            address TEXT,
+            isAdmin BOOLEAN DEFAULT FALSE,
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    `;
+
+    // Products table
+    const createProductsTable = `
+        CREATE TABLE IF NOT EXISTS products (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            description TEXT,
+            price DECIMAL(10,2) NOT NULL,
+            stock INT DEFAULT 0,
+            imageUrl VARCHAR(500),
+            category VARCHAR(100),
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    `;
+
+    // Orders table
+    const createOrdersTable = `
+        CREATE TABLE IF NOT EXISTS orders (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            userId INT NOT NULL,
+            totalAmount DECIMAL(10,2) NOT NULL,
+            status ENUM('pending', 'confirmed', 'shipped', 'delivered', 'cancelled') DEFAULT 'pending',
+            shippingAddress TEXT,
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (userId) REFERENCES users(id)
+        )
+    `;
+
+    // Order items table
+    const createOrderItemsTable = `
+        CREATE TABLE IF NOT EXISTS order_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            orderId INT NOT NULL,
+            productId INT NOT NULL,
+            quantity INT NOT NULL,
+            price DECIMAL(10,2) NOT NULL,
+            FOREIGN KEY (orderId) REFERENCES orders(id),
+            FOREIGN KEY (productId) REFERENCES products(id)
+        )
+    `;
+
+    db.query(createUsersTable, (err) => {
+        if (err) console.error('Error creating users table:', err);
+    });
+
+    db.query(createProductsTable, (err) => {
+        if (err) console.error('Error creating products table:', err);
+    });
+
+    db.query(createOrdersTable, (err) => {
+        if (err) console.error('Error creating orders table:', err);
+    });
+
+    db.query(createOrderItemsTable, (err) => {
+        if (err) console.error('Error creating order_items table:', err);
+    });
+};
+
+createTables();
+
+// JWT Middleware
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Access token required' });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, user) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid token' });
+        }
+        req.user = user;
+        next();
+    });
+};
+
+// Admin Middleware
+const requireAdmin = (req, res, next) => {
+    if (!req.user.isAdmin) {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+};
+
+// =============================================================================
+// AUTH ROUTES
+// =============================================================================
+
+// Register
+app.post('/api/register', async (req, res) => {
+    try {
+        const { email, password, firstName, lastName, username, phone, address } = req.body;
+
+        // Validation
+        if (!email || !password || !firstName || !lastName || !username) {
+            return res.status(400).json({ error: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
+        }
+
+        // Check if user exists
+        db.query('SELECT * FROM users WHERE email = ? OR username = ?', [email, username], async (err, results) => {
+            if (err) {
+                return res.status(500).json({ error: 'Database error' });
+            }
+
+            if (results.length > 0) {
+                return res.status(400).json({ error: 'อีเมลหรือชื่อผู้ใช้นี้มีอยู่แล้ว' });
+            }
+
+            // Hash password
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            // Insert user
+            const insertQuery = 'INSERT INTO users (email, password, firstName, lastName, username, phone, address) VALUES (?, ?, ?, ?, ?, ?, ?)';
+            db.query(insertQuery, [email, hashedPassword, firstName, lastName, username, phone, address], (err, result) => {
+                if (err) {
+                    return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการสมัครสมาชิก' });
+                }
+
+                res.status(201).json({ message: 'สมัครสมาชิกสำเร็จ' });
+            });
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Login
+app.post('/api/login', (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ error: 'กรุณากรอกอีเมลและรหัสผ่าน' });
+        }
+
+        db.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
+            if (err) {
+                return res.status(500).json({ error: 'Database error' });
+            }
+
+            if (results.length === 0) {
+                return res.status(401).json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
+            }
+
+            const user = results[0];
+            const isValidPassword = await bcrypt.compare(password, user.password);
+
+            if (!isValidPassword) {
+                return res.status(401).json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
+            }
+
+            // Generate JWT token
+            const token = jwt.sign(
+                { 
+                    id: user.id, 
+                    email: user.email, 
+                    username: user.username,
+                    isAdmin: user.isAdmin 
+                },
+                process.env.JWT_SECRET || 'your-secret-key',
+                { expiresIn: '24h' }
+            );
+
+            // Remove password from response
+            const { password: _, ...userWithoutPassword } = user;
+
+            res.json({
+                message: 'เข้าสู่ระบบสำเร็จ',
+                token,
+                user: userWithoutPassword
+            });
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Admin Login
+app.post('/api/admin-login', (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({ error: 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน' });
+        }
+
+        db.query('SELECT * FROM users WHERE username = ? AND isAdmin = TRUE', [username], async (err, results) => {
+            if (err) {
+                return res.status(500).json({ error: 'Database error' });
+            }
+
+            if (results.length === 0) {
+                return res.status(401).json({ error: 'ไม่พบบัญชีแอดมิน' });
+            }
+
+            const admin = results[0];
+            const isValidPassword = await bcrypt.compare(password, admin.password);
+
+            if (!isValidPassword) {
+                return res.status(401).json({ error: 'รหัสผ่านไม่ถูกต้อง' });
+            }
+
+            // Generate JWT token
+            const token = jwt.sign(
+                { 
+                    id: admin.id, 
+                    email: admin.email, 
+                    username: admin.username,
+                    isAdmin: true 
+                },
+                process.env.JWT_SECRET || 'your-secret-key',
+                { expiresIn: '24h' }
+            );
+
+            // Remove password from response
+            const { password: _, ...adminWithoutPassword } = admin;
+
+            res.json({
+                message: 'เข้าสู่ระบบแอดมินสำเร็จ',
+                token,
+                user: adminWithoutPassword
+            });
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// =============================================================================
+// PRODUCT ROUTES
+// =============================================================================
+
+// Get all products
+app.get('/api/products', (req, res) => {
+    db.query('SELECT * FROM products ORDER BY createdAt DESC', (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: 'Database error' });
+        }
+        res.json(results);
+    });
+});
+
+// Get product by ID
+app.get('/api/products/:id', (req, res) => {
+    const { id } = req.params;
+    
+    db.query('SELECT * FROM products WHERE id = ?', [id], (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: 'Database error' });
+        }
+        
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'ไม่พบสินค้า' });
+        }
+        
+        res.json(results[0]);
+    });
+});
+
+// Add product (Admin only)
+app.post('/api/products', authenticateToken, requireAdmin, (req, res) => {
+    const { name, description, price, stock, imageUrl, category } = req.body;
+
+    if (!name || !price) {
+        return res.status(400).json({ error: 'กรุณากรอกชื่อสินค้าและราคา' });
+    }
+
+    const insertQuery = 'INSERT INTO products (name, description, price, stock, imageUrl, category) VALUES (?, ?, ?, ?, ?, ?)';
+    db.query(insertQuery, [name, description, price, stock || 0, imageUrl, category], (err, result) => {
+        if (err) {
+            return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการเพิ่มสินค้า' });
+        }
+
+        res.status(201).json({ 
+            message: 'เพิ่มสินค้าสำเร็จ', 
+            productId: result.insertId 
+        });
+    });
+});
+
+// Update product (Admin only)
+app.put('/api/products/:id', authenticateToken, requireAdmin, (req, res) => {
+    const { id } = req.params;
+    const { name, description, price, stock, imageUrl, category } = req.body;
+
+    const updateQuery = 'UPDATE products SET name = ?, description = ?, price = ?, stock = ?, imageUrl = ?, category = ? WHERE id = ?';
+    db.query(updateQuery, [name, description, price, stock, imageUrl, category, id], (err, result) => {
+        if (err) {
+            return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการอัพเดตสินค้า' });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'ไม่พบสินค้า' });
+        }
+
+        res.json({ message: 'อัพเดตสินค้าสำเร็จ' });
+    });
+});
+
+// Delete product (Admin only)
+app.delete('/api/products/:id', authenticateToken, requireAdmin, (req, res) => {
+    const { id } = req.params;
+
+    db.query('DELETE FROM products WHERE id = ?', [id], (err, result) => {
+        if (err) {
+            return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการลบสินค้า' });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'ไม่พบสินค้า' });
+        }
+
+        res.json({ message: 'ลบสินค้าสำเร็จ' });
+    });
+});
+
+// =============================================================================
+// ORDER ROUTES
+// =============================================================================
+
+// Create order
+app.post('/api/orders', authenticateToken, (req, res) => {
+    const { items, shippingAddress } = req.body;
+    const userId = req.user.id;
+
+    if (!items || items.length === 0) {
+        return res.status(400).json({ error: 'กรุณาเลือกสินค้า' });
+    }
+
+    // Calculate total amount
+    let totalAmount = 0;
+    const productChecks = items.map(item => {
+        return new Promise((resolve, reject) => {
+            db.query('SELECT * FROM products WHERE id = ?', [item.productId], (err, results) => {
+                if (err) reject(err);
+                if (results.length === 0) reject(new Error('ไม่พบสินค้า'));
+                
+                const product = results[0];
+                if (product.stock < item.quantity) {
+                    reject(new Error(`สินค้า ${product.name} เหลือไม่เพียงพอ`));
+                }
+                
+                totalAmount += product.price * item.quantity;
+                resolve({ ...item, price: product.price });
+            });
+        });
+    });
+
+    Promise.all(productChecks)
+        .then((validatedItems) => {
+            // Create order
+            const insertOrderQuery = 'INSERT INTO orders (userId, totalAmount, shippingAddress) VALUES (?, ?, ?)';
+            db.query(insertOrderQuery, [userId, totalAmount, shippingAddress], (err, orderResult) => {
+                if (err) {
+                    return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการสร้างคำสั่งซื้อ' });
+                }
+
+                const orderId = orderResult.insertId;
+
+                // Insert order items and update product stock
+                validatedItems.forEach(item => {
+                    // Insert order item
+                    const insertItemQuery = 'INSERT INTO order_items (orderId, productId, quantity, price) VALUES (?, ?, ?, ?)';
+                    db.query(insertItemQuery, [orderId, item.productId, item.quantity, item.price]);
+
+                    // Update product stock
+                    const updateStockQuery = 'UPDATE products SET stock = stock - ? WHERE id = ?';
+                    db.query(updateStockQuery, [item.quantity, item.productId]);
+                });
+
+                res.status(201).json({ 
+                    message: 'สร้างคำสั่งซื้อสำเร็จ', 
+                    orderId: orderId,
+                    totalAmount: totalAmount
+                });
+            });
+        })
+        .catch((error) => {
+            res.status(400).json({ error: error.message });
+        });
+});
+
+// Get user orders
+app.get('/api/orders', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+
+    const query = `
+        SELECT o.*, 
+               JSON_ARRAYAGG(
+                   JSON_OBJECT(
+                       'productId', oi.productId,
+                       'quantity', oi.quantity,
+                       'price', oi.price,
+                       'productName', p.name
+                   )
+               ) as items
+        FROM orders o
+        LEFT JOIN order_items oi ON o.id = oi.orderId
+        LEFT JOIN products p ON oi.productId = p.id
+        WHERE o.userId = ?
+        GROUP BY o.id
+        ORDER BY o.createdAt DESC
+    `;
+
+    db.query(query, [userId], (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: 'Database error' });
+        }
+        res.json(results);
+    });
+});
+
+// Get all orders (Admin only)
+app.get('/api/admin/orders', authenticateToken, requireAdmin, (req, res) => {
+    const query = `
+        SELECT o.*, u.firstName, u.lastName, u.email,
+               JSON_ARRAYAGG(
+                   JSON_OBJECT(
+                       'productId', oi.productId,
+                       'quantity', oi.quantity,
+                       'price', oi.price,
+                       'productName', p.name
+                   )
+               ) as items
+        FROM orders o
+        LEFT JOIN users u ON o.userId = u.id
+        LEFT JOIN order_items oi ON o.id = oi.orderId
+        LEFT JOIN products p ON oi.productId = p.id
+        GROUP BY o.id
+        ORDER BY o.createdAt DESC
+    `;
+
+    db.query(query, (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: 'Database error' });
+        }
+        res.json(results);
+    });
+});
+
+// Update order status (Admin only)
+app.put('/api/orders/:id/status', authenticateToken, requireAdmin, (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'สถานะไม่ถูกต้อง' });
+    }
+
+    db.query('UPDATE orders SET status = ? WHERE id = ?', [status, id], (err, result) => {
+        if (err) {
+            return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการอัพเดตสถานะ' });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อ' });
+        }
+
+        res.json({ message: 'อัพเดตสถานะสำเร็จ' });
+    });
+});
+
+// =============================================================================
+// USER ROUTES
+// =============================================================================
+
+// Get user profile
+app.get('/api/profile', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+
+    db.query('SELECT id, email, firstName, lastName, username, phone, address, isAdmin FROM users WHERE id = ?', [userId], (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
+        }
+
+        res.json(results[0]);
+    });
+});
+
+// Update user profile
+app.put('/api/profile', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    const { firstName, lastName, phone, address } = req.body;
+
+    const updateQuery = 'UPDATE users SET firstName = ?, lastName = ?, phone = ?, address = ? WHERE id = ?';
+    db.query(updateQuery, [firstName, lastName, phone, address, userId], (err, result) => {
+        if (err) {
+            return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการอัพเดตโปรไฟล์' });
+        }
+
+        res.json({ message: 'อัพเดตโปรไฟล์สำเร็จ' });
+    });
+});
+
+// =============================================================================
+// SERVE FRONTEND
+// =============================================================================
+
+// Serve the main HTML file
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/public/index.html');
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Something went wrong!' });
+});
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`MaruGod Shop Server running on port ${PORT}`);
+    console.log(`Visit: http://localhost:${PORT}`);
+});
+
+module.exports = app;
