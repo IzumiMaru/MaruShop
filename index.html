@@ -498,6 +498,26 @@
             color: #721c24;
         }
 
+        .status-active {
+            background: rgba(40, 167, 69, 0.2);
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: rgba(108, 117, 125, 0.2);
+            color: #495057;
+        }
+
+        .status-in-stock {
+            background: rgba(40, 167, 69, 0.2);
+            color: #155724;
+        }
+
+        .status-out-of-stock {
+            background: rgba(220, 53, 69, 0.2);
+            color: #721c24;
+        }
+
         .empty-state {
             text-align: center;
             padding: 50px;
@@ -517,8 +537,45 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
+        .activity-item {
+            padding: 15px;
+            border-left: 4px solid #2e86ab;
+            margin-bottom: 10px;
+            background: rgba(135, 206, 235, 0.1);
+            border-radius: 0 10px 10px 0;
+        }
+
+        .activity-time {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .activity-text {
+            margin-top: 5px;
+            color: #333;
+        }
+
         .hidden {
             display: none;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+
+        .alert-success {
+            background: rgba(40, 167, 69, 0.1);
+            color: #155724;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+
+        .alert-error {
+            background: rgba(220, 53, 69, 0.1);
+            color: #721c24;
+            border: 1px solid rgba(220, 53, 69, 0.3);
         }
 
         @media (max-width: 768px) {
@@ -588,7 +645,7 @@
 
         <!-- Dashboard Section -->
         <div class="section active" id="dashboard">
-            <h2>📊 แดshboard</h2>
+            <h2>📊 แดชบอร์ด</h2>
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-number" id="total-users">0</div>
@@ -617,7 +674,7 @@
         <!-- Users Management Section -->
         <div class="section" id="users">
             <h2>👥 จัดการผู้ใช้</h2>
-            <input type="text" class="search-box" placeholder="🔍 ค้นหาผู้ใช้..." oninput="searchUsers(this.value)">
+            <input type="text" class="search-box" id="user-search" placeholder="🔍 ค้นหาผู้ใช้..." oninput="searchUsers(this.value)">
             
             <table class="data-table">
                 <thead>
@@ -640,7 +697,7 @@
         <div class="section" id="products">
             <h2>🛍️ จัดการสินค้า</h2>
             <button class="form-btn" onclick="showAddProductModal()">➕ เพิ่มสินค้าใหม่</button>
-            <input type="text" class="search-box" placeholder="🔍 ค้นหาสินค้า..." oninput="searchProducts(this.value)">
+            <input type="text" class="search-box" id="product-search" placeholder="🔍 ค้นหาสินค้า..." oninput="searchProducts(this.value)">
             
             <table class="data-table">
                 <thead>
@@ -649,6 +706,7 @@
                         <th>ชื่อสินค้า</th>
                         <th>หมวดหมู่</th>
                         <th>ราคา</th>
+                        <th>จำนวน</th>
                         <th>สถานะ</th>
                         <th>การดำเนินการ</th>
                     </tr>
@@ -662,7 +720,7 @@
         <!-- Orders Management Section -->
         <div class="section" id="orders">
             <h2>📦 จัดการคำสั่งซื้อ</h2>
-            <input type="text" class="search-box" placeholder="🔍 ค้นหาคำสั่งซื้อ..." oninput="searchOrders(this.value)">
+            <input type="text" class="search-box" id="order-search" placeholder="🔍 ค้นหาคำสั่งซื้อ..." oninput="searchOrders(this.value)">
             
             <table class="data-table">
                 <thead>
@@ -670,6 +728,7 @@
                         <th>รหัสคำสั่งซื้อ</th>
                         <th>ผู้ซื้อ</th>
                         <th>สินค้า</th>
+                        <th>จำนวน</th>
                         <th>ยอดรวม</th>
                         <th>สถานะ</th>
                         <th>วันที่สั่งซื้อ</th>
@@ -738,29 +797,4 @@
             <div class="form-group">
                 <label class="form-label">สถานะร้านค้า</label>
                 <select class="form-select" id="shop-status">
-                    <option value="open">เปิดให้บริการ</option>
-                    <option value="maintenance">ปิดปรับปรุง</option>
-                    <option value="closed">ปิดชั่วคราว</option>
-                </select>
-            </div>
-
-            <button class="form-btn" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
-
-            <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #eee;">
-                <h3 style="color: #dc3545; margin-bottom: 20px;">🗑️ จัดการฐานข้อมูล</h3>
-                <button class="form-btn" style="background: linear-gradient(135deg, #ffc107, #e0a800); margin-right: 10px;" onclick="backupDatabase()">💾 สำรองข้อมูل</button>
-                <button class="form-btn" style="background: linear-gradient(135deg, #17a2b8, #138496); margin-right: 10px;" onclick="exportData()">📤 ส่งออกข้อมูล</button>
-                <button class="form-btn" style="background: linear-gradient(135deg, #dc3545, #c82333);" onclick="confirmClearDatabase()">🗑️ ล้างฐานข้อมูล</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add/Edit Product Modal -->
-    <div class="modal" id="product-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">🛍️ เพิ่ม/แก้ไขสินค้า</div>
-                <button class="close-modal" onclick="closeProductModal()">×</button>
-            </div>
-            
-            <form id="product-form">
+                    <option value="
