@@ -80,6 +80,8 @@
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
             border: 2px solid rgba(135, 206, 235, 0.5);
             text-align: center;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .modal-title {
@@ -95,7 +97,7 @@
             font-size: 1.1em;
         }
 
-        .form-input {
+        .form-input, .form-select, .form-textarea {
             width: 100%;
             padding: 15px 20px;
             margin: 10px 0;
@@ -104,9 +106,15 @@
             background: rgba(255, 255, 255, 0.9);
             font-size: 1.1em;
             transition: all 0.3s ease;
+            font-family: inherit;
         }
 
-        .form-input:focus {
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
             outline: none;
             border-color: #2e86ab;
             box-shadow: 0 0 15px rgba(46, 134, 171, 0.3);
@@ -208,6 +216,7 @@
             display: flex;
             gap: 10px;
             z-index: 100;
+            flex-wrap: wrap;
         }
 
         .control-btn {
@@ -268,11 +277,26 @@
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease;
             border: 2px solid rgba(135, 206, 235, 0.3);
+            position: relative;
         }
 
         .product-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3em;
+            color: #6c757d;
+            border: 2px dashed #dee2e6;
         }
 
         .product-name {
@@ -285,6 +309,8 @@
         .product-description {
             color: #666;
             margin-bottom: 15px;
+            font-size: 0.95em;
+            line-height: 1.4;
         }
 
         .product-price {
@@ -297,6 +323,46 @@
         .product-stock {
             color: #666;
             margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .product-stock.low-stock {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            gap: 15px;
+        }
+
+        .quantity-btn {
+            background: #2e86ab;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quantity-btn:hover {
+            background: #4682b4;
+            transform: scale(1.1);
+        }
+
+        .quantity-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2e86ab;
+            min-width: 40px;
+            text-align: center;
         }
 
         .buy-btn {
@@ -320,6 +386,25 @@
         .buy-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
+        }
+
+        .cart-btn {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .cart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
 
         .admin-panel {
@@ -413,6 +498,11 @@
             color: white;
         }
 
+        .btn-approve {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+
         .action-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
@@ -450,6 +540,91 @@
             opacity: 0.9;
         }
 
+        .cart-count {
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            font-weight: bold;
+            position: absolute;
+            top: -10px;
+            right: -10px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-input {
+            flex: 1;
+        }
+
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-upload-label {
+            display: block;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px dashed rgba(135, 206, 235, 0.5);
+            border-radius: 15px;
+            text-align: center;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload:hover .file-upload-label {
+            border-color: #2e86ab;
+            background: rgba(46, 134, 171, 0.1);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            z-index: 3000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+
+        .notification.info {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -468,6 +643,10 @@
             .admin-nav {
                 justify-content: flex-start;
                 overflow-x: auto;
+            }
+
+            .form-row {
+                flex-direction: column;
             }
         }
     </style>
@@ -506,10 +685,18 @@
             <div id="register-error" class="error-message"></div>
             <div id="register-success" class="success-message"></div>
             
+            <div class="form-row">
+                <input type="text" id="register-firstname" class="form-input" placeholder="ชื่อจริง" required>
+                <input type="text" id="register-lastname" class="form-input" placeholder="นามสกุล" required>
+            </div>
+            
             <input type="text" id="register-username" class="form-input" placeholder="ชื่อผู้ใช้" required>
             <input type="email" id="register-email" class="form-input" placeholder="อีเมล" required>
+            <input type="tel" id="register-phone" class="form-input" placeholder="เบอร์โทรศัพท์" required>
             <input type="password" id="register-password" class="form-input" placeholder="รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)" required>
             <input type="password" id="register-confirm-password" class="form-input" placeholder="ยืนยันรหัสผ่าน" required>
+            
+            <textarea id="register-address" class="form-textarea" placeholder="ที่อยู่สำหรับจัดส่งสินค้า" required></textarea>
             
             <button class="form-btn" onclick="userRegister()" id="register-btn">📝 สมัครสมาชิก</button>
             
@@ -547,7 +734,7 @@
             <div id="admin-login-error" class="error-message"></div>
             
             <input type="text" id="admin-username" class="form-input" placeholder="ชื่อผู้ใช้แอดมิน" required>
-            <input type="password" id="admin-password" class="form-input" placeholder="รหัสผ่านแอดมิน" required>
+            <input type="password" id="admin-password" class="form-input" placeholder="รหัsผ่านแอดมิน" required>
             
             <button class="form-btn" onclick="adminLogin()" id="admin-login-btn">👑 เข้าสู่ระบบแอดมิน</button>
             
@@ -556,174 +743,27 @@
             </div>
         </div>
     </div>
-    
-    <div class="container">
-        <!-- User Shop Interface -->
-        <div id="user-interface">
-            <header>
-                <div class="logo">⚡ MaruGod Shop</div>
-                <div class="subtitle">ร้านค้าออนไลน์สำหรับเกม Grow a Garden</div>
-            </header>
 
-            <div class="user-controls">
-                <div class="user-info hidden" id="user-info">
-                    👤 <span id="user-display-name"></span>
-                </div>
-                <button class="control-btn hidden" onclick="userLogout()" id="logout-btn">🚪 ออกจากระบบ</button>
+    <!-- Add/Edit Product Modal -->
+    <div class="modal hidden" id="product-modal">
+        <div class="modal-content">
+            <div class="modal-title" id="product-modal-title">➕ เพิ่มสินค้าใหม่</div>
+            
+            <div id="product-error" class="error-message"></div>
+            <div id="product-success" class="success-message"></div>
+            
+            <input type="hidden" id="product-id">
+            
+            <input type="text" id="product-name" class="form-input" placeholder="ชื่อสินค้า" required>
+            
+            <textarea id="product-description" class="form-textarea" placeholder="รายละเอียดสินค้า" required></textarea>
+            
+            <div class="form-row">
+                <input type="number" id="product-price" class="form-input" placeholder="ราคา (บาท)" min="0" step="0.01" required>
+                <input type="number" id="product-stock" class="form-input" placeholder="จำนวนสต๊อก" min="0" required>
             </div>
-
-            <div class="shop-section">
-                <h2>🛍️ สินค้าทั้งหมด</h2>
-                <div class="products-grid" id="products-display">
-                    <!-- Products will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Admin Interface -->
-        <div id="admin-interface" class="admin-panel">
-            <header>
-                <div class="logo">👑 MaruGod Shop Admin</div>
-                <div class="subtitle">ระบบจัดการร้านค้าและฐานข้อมูล</div>
-            </header>
-
-            <div class="user-controls">
-                <div class="user-info" id="admin-info">
-                    👑 แอดมิน: <span id="admin-display-name"></span>
-                </div>
-                <button class="control-btn" onclick="switchToUserMode()">🛒 ไปที่ร้านค้า</button>
-                <button class="control-btn" onclick="adminLogout()">🚪 ออกจากระบบ</button>
-            </div>
-
-            <div class="admin-nav">
-                <button class="admin-tab active" onclick="showAdminSection('dashboard')">📊 แดชบอร์ด</button>
-                <button class="admin-tab" onclick="showAdminSection('users')">👥 จัดการผู้ใช้</button>
-                <button class="admin-tab" onclick="showAdminSection('products')">🛍️ จัดการสินค้า</button>
-                <button class="admin-tab" onclick="showAdminSection('orders')">📦 คำสั่งซื้อ</button>
-            </div>
-
-            <!-- Dashboard Section -->
-            <div class="shop-section admin-section active" id="admin-dashboard">
-                <h2>📊 แดชบอร์ด</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-number" id="total-users">0</div>
-                        <div class="stat-label">👥 ผู้ใช้ทั้งหมด</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="total-products">0</div>
-                        <div class="stat-label">🛍️ สินค้าทั้งหมด</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="total-orders">0</div>
-                        <div class="stat-label">📦 คำสั่งซื้อทั้งหมด</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="total-revenue">0</div>
-                        <div class="stat-label">💰 รายได้รวม (฿)</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Users Management Section -->
-            <div class="shop-section admin-section" id="admin-users">
-                <h2>👥 จัดการผู้ใช้</h2>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>ชื่อผู้ใช้</th>
-                            <th>อีเมล</th>
-                            <th>วันที่สมัคร</th>
-                            <th>สถานะ</th>
-                            <th>การดำเนินการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="users-table">
-                        <!-- Users data will be loaded here -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Products Management Section -->
-            <div class="shop-section admin-section" id="admin-products">
-                <h2>🛍️ จัดการสินค้า</h2>
-                <button class="form-btn" onclick="showAddProductForm()" style="margin-bottom: 20px;">➕ เพิ่มสินค้าใหม่</button>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>ชื่อสินค้า</th>
-                            <th>ราคา</th>
-                            <th>จำนวน</th>
-                            <th>สถานะ</th>
-                            <th>การดำเนินการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-products-table">
-                        <!-- Products data will be loaded here -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Orders Management Section -->
-            <div class="shop-section admin-section" id="admin-orders">
-                <h2>📦 จัดการคำสั่งซื้อ</h2>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>รหัสคำสั่งซื้อ</th>
-                            <th>ผู้ซื้อ</th>
-                            <th>สินค้า</th>
-                            <th>จำนวน</th>
-                            <th>ยอดรวม</th>
-                            <th>สถานะ</th>
-                            <th>วันที่สั่งซื้อ</th>
-                            <th>การดำเนินการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="orders-table">
-                        <!-- Orders data will be loaded here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Mock Database
-        let users = [
-            { id: 1, username: 'user1', email: 'user1@example.com', password: 'password123', registeredDate: '2024-01-15', status: 'active' },
-            { id: 2, username: 'user2', email: 'user2@example.com', password: 'password456', registeredDate: '2024-01-20', status: 'active' }
-        ];
-
-        let products = [
-            { id: 1, name: 'เมล็ดพันธุ์ดอกไม้หายาก', description: 'เมล็ดพันธุ์ดอกไม้สำหรับเกม Grow a Garden', price: 50, stock: 100, status: 'active' },
-            { id: 2, name: 'ปุ๋ยพิเศษ', description: 'ปุ๋ยเร่งการเจริญเติบโต', price: 25, stock: 200, status: 'active' },
-            { id: 3, name: 'น้ำวิเศษ', description: 'น้ำเวทมนตร์เพิ่มความแข็งแรงให้พืช', price: 75, stock: 50, status: 'active' },
-            { id: 4, name: 'กระถางทอง', description: 'กระถางพิเศษเพิ่มโอกาสได้ไอเทมหายาก', price: 150, stock: 20, status: 'active' }
-        ];
-
-        let orders = [
-            { id: 'ORD001', userId: 1, productId: 1, quantity: 2, total: 100, status: 'completed', orderDate: '2024-01-25' },
-            { id: 'ORD002', userId: 2, productId: 2, quantity: 1, total: 25, status: 'pending', orderDate: '2024-01-26' }
-        ];
-
-        let admins = [
-            { username: 'admin', password: 'admin123' },
-            { username: 'superadmin', password: 'super123' }
-        ];
-
-        let currentUser = null;
-        let currentAdmin = null;
-        let userIdCounter = users.length + 1;
-        let orderIdCounter = orders.length + 1;
-
-        // Initialize
-        window.onload = function() {
-            showLoginModal();
-            loadProducts();
-        };
-
-        // Modal Functions
-        function show
+            
+            <select id="product-category" class="form-select" required>
+                <option value="">เลือกหมวดหมู่สินค้า</option>
+                <option value="seeds">เมล็ดพันธุ์</option>
+                <option value="fertilizer">ปุ๋ย
